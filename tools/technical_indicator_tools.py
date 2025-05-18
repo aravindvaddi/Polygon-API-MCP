@@ -66,10 +66,10 @@ ALL_INDICATOR_TOOL_DEFS: List[Dict[str, Any]] = [
 # (Functions get_sma, get_ema, get_macd, get_rsi are defined below)
 
 INDICATOR_TOOL_HANDLERS = {
-    "get_sma": lambda stockTicker, ctx, timestamp=None, timestamp_gte=None, timestamp_gt=None, timestamp_lte=None, timestamp_lt=None, timespan="day", adjusted=True, window=50, series_type="close", expand_underlying=False, order="desc", limit=10: get_sma(stockTicker, ctx, timestamp, timestamp_gte, timestamp_gt, timestamp_lte, timestamp_lt, timespan, adjusted, window, series_type, expand_underlying, order, limit),
-    "get_ema": lambda stockTicker, ctx, timestamp=None, timestamp_gte=None, timestamp_gt=None, timestamp_lte=None, timestamp_lt=None, timespan="day", adjusted=True, window=50, series_type="close", expand_underlying=False, order="desc", limit=10: get_ema(stockTicker, ctx, timestamp, timestamp_gte, timestamp_gt, timestamp_lte, timestamp_lt, timespan, adjusted, window, series_type, expand_underlying, order, limit),
-    "get_macd": lambda stockTicker, ctx, timestamp=None, timestamp_gte=None, timestamp_gt=None, timestamp_lte=None, timestamp_lt=None, timespan="day", adjusted=True, short_window=12, long_window=26, signal_window=9, series_type="close", expand_underlying=False, order="desc", limit=10: get_macd(stockTicker, ctx, timestamp, timestamp_gte, timestamp_gt, timestamp_lte, timestamp_lt, timespan, adjusted, short_window, long_window, signal_window, series_type, expand_underlying, order, limit),
-    "get_rsi": lambda stockTicker, ctx, timestamp=None, timestamp_gte=None, timestamp_gt=None, timestamp_lte=None, timestamp_lt=None, timespan="day", adjusted=True, window=14, series_type="close", expand_underlying=False, order="desc", limit=10: get_rsi(stockTicker, ctx, timestamp, timestamp_gte, timestamp_gt, timestamp_lte, timestamp_lt, timespan, adjusted, window, series_type, expand_underlying, order, limit),
+    "get_sma": lambda stockTicker, timestamp=None, timestamp_gte=None, timestamp_gt=None, timestamp_lte=None, timestamp_lt=None, timespan="day", adjusted=True, window=50, series_type="close", expand_underlying=False, order="desc", limit=10: get_sma(stockTicker, timestamp, timestamp_gte, timestamp_gt, timestamp_lte, timestamp_lt, timespan, adjusted, window, series_type, expand_underlying, order, limit),
+    "get_ema": lambda stockTicker, timestamp=None, timestamp_gte=None, timestamp_gt=None, timestamp_lte=None, timestamp_lt=None, timespan="day", adjusted=True, window=50, series_type="close", expand_underlying=False, order="desc", limit=10: get_ema(stockTicker, timestamp, timestamp_gte, timestamp_gt, timestamp_lte, timestamp_lt, timespan, adjusted, window, series_type, expand_underlying, order, limit),
+    "get_macd": lambda stockTicker, timestamp=None, timestamp_gte=None, timestamp_gt=None, timestamp_lte=None, timestamp_lt=None, timespan="day", adjusted=True, short_window=12, long_window=26, signal_window=9, series_type="close", expand_underlying=False, order="desc", limit=10: get_macd(stockTicker, timestamp, timestamp_gte, timestamp_gt, timestamp_lte, timestamp_lt, timespan, adjusted, short_window, long_window, signal_window, series_type, expand_underlying, order, limit),
+    "get_rsi": lambda stockTicker, timestamp=None, timestamp_gte=None, timestamp_gt=None, timestamp_lte=None, timestamp_lt=None, timespan="day", adjusted=True, window=14, series_type="close", expand_underlying=False, order="desc", limit=10: get_rsi(stockTicker, timestamp, timestamp_gte, timestamp_gt, timestamp_lte, timestamp_lt, timespan, adjusted, window, series_type, expand_underlying, order, limit),
 }
 
 # --- Registration Function ---
@@ -109,7 +109,7 @@ def register_tools(mcp_instance: FastMCP):
 # --- Simple Moving Average (SMA) ---
 async def get_sma(
     stockTicker: str,
-    ctx: Context, # MCP Context for logging, etc.
+    # ctx: Context, # MCP Context for logging, etc. - REMOVED
     timestamp: Optional[str] = None,
     timestamp_gte: Optional[str] = None,
     timestamp_gt: Optional[str] = None,
@@ -167,14 +167,15 @@ async def get_sma(
     params = {k: v for k, v in params.items() if v is not None}
 
     path = f"/v1/indicators/sma/{stockTicker}"
-    ctx.info(f"Fetching SMA for {stockTicker} with params: {params}")
+    # ctx.info(f"Fetching SMA for {stockTicker} with params: {params}") # REMOVED CTX USAGE
+    logger.info(f"Fetching SMA for {stockTicker} with params: {params}") # Added basic logging
     return await _fetch_indicator_data(path, params)
 
 
 # --- Exponential Moving Average (EMA) ---
 async def get_ema(
     stockTicker: str,
-    ctx: Context, # MCP Context for logging, etc.
+    # ctx: Context, # MCP Context for logging, etc. - REMOVED
     timestamp: Optional[str] = None,
     timestamp_gte: Optional[str] = None,
     timestamp_gt: Optional[str] = None,
@@ -231,14 +232,15 @@ async def get_ema(
     params = {k: v for k, v in params.items() if v is not None}
 
     path = f"/v1/indicators/ema/{stockTicker}"
-    ctx.info(f"Fetching EMA for {stockTicker} with params: {params}")
+    # ctx.info(f"Fetching EMA for {stockTicker} with params: {params}") # REMOVED CTX USAGE
+    logger.info(f"Fetching EMA for {stockTicker} with params: {params}") # Added basic logging
     return await _fetch_indicator_data(path, params)
 
 
 # --- Moving Average Convergence Divergence (MACD) ---
 async def get_macd(
     stockTicker: str,
-    ctx: Context, # MCP Context for logging, etc.
+    # ctx: Context, # MCP Context for logging, etc. - REMOVED
     timestamp: Optional[str] = None,
     timestamp_gte: Optional[str] = None,
     timestamp_gt: Optional[str] = None,
@@ -301,14 +303,15 @@ async def get_macd(
     params = {k: v for k, v in params.items() if v is not None}
 
     path = f"/v1/indicators/macd/{stockTicker}"
-    ctx.info(f"Fetching MACD for {stockTicker} with params: {params}")
+    # ctx.info(f"Fetching MACD for {stockTicker} with params: {params}") # REMOVED CTX USAGE
+    logger.info(f"Fetching MACD for {stockTicker} with params: {params}") # Added basic logging
     return await _fetch_indicator_data(path, params)
 
 
 # --- Relative Strength Index (RSI) ---
 async def get_rsi(
     stockTicker: str,
-    ctx: Context, # MCP Context for logging, etc.
+    # ctx: Context, # MCP Context for logging, etc. - REMOVED
     timestamp: Optional[str] = None,
     timestamp_gte: Optional[str] = None,
     timestamp_gt: Optional[str] = None,
@@ -365,7 +368,8 @@ async def get_rsi(
     params = {k: v for k, v in params.items() if v is not None}
 
     path = f"/v1/indicators/rsi/{stockTicker}"
-    ctx.info(f"Fetching RSI for {stockTicker} with params: {params}")
+    # ctx.info(f"Fetching RSI for {stockTicker} with params: {params}") # REMOVED CTX USAGE
+    logger.info(f"Fetching RSI for {stockTicker} with params: {params}") # Added basic logging
     return await _fetch_indicator_data(path, params)
 
 # Ensure the async functions are defined before INDICATOR_TOOL_HANDLERS uses them.
