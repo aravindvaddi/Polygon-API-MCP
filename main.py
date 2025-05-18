@@ -1,132 +1,124 @@
 import asyncio
 import os
+import logging
 
-# We'll need to import from the actual MCP SDK when available.
-# from mcp_sdk import MCPServer, Tool # Fictional MCP SDK imports
+# Import from the MCP SDK
+from mcp import MCPServer, ToolDefinition, ToolParameter # Assuming these are common MCP SDK classes
 
 # Import our tool definitions and handlers
-from .tools.ohlcv_tools import ALL_TOOL_DEFS, TOOL_HANDLERS
+from tools.ohlcv_tools import ALL_TOOL_DEFS, TOOL_HANDLERS # Corrected import path
 
-# --- Mock MCP Server Components (Replace with actual SDK when available) ---
-class MockTool:
-    """A mock representation of an MCP Tool."""
-    def __init__(self, name, description, input_schema, output_schema, handler):
-        self.name = name
-        self.description = description
-        self.input_schema = input_schema
-        self.output_schema = output_schema
-        self.handler = handler
-        # In a real MCP tool, permissions would be handled here or by the server.
-        # For now, we follow the design of no specific permissions.
-
-    async def execute(self, **kwargs):
-        # This is a simplified execution. A real SDK might have more context,
-        # user info, etc.
-        print(f"Executing tool: {self.name} with arguments: {kwargs}")
-        if not self.handler:
-            return {"error": f"No handler configured for tool {self.name}"}
-        # Assuming the handler is an async function
-        return await self.handler(**kwargs)
-
-class MockMCPServer:
-    """A mock representation of an MCP Server."""
-    def __init__(self, host="0.0.0.0", port=8080):
-        self.host = host
-        self.port = port
-        self.tools = {} # Stores MockTool instances
-        print(f"Mock MCP Server initialized to run on {host}:{port}")
-
-    def register_tool(self, tool_definition: dict, handler_function):
-        tool_name = tool_definition.get("tool_name")
-        if not tool_name:
-            print("Error: Tool definition is missing a 'tool_name'. Cannot register.")
-            return
-
-        if tool_name in self.tools:
-            print(f"Warning: Tool '{tool_name}' is being redefined.")
-
-        # Create a mock tool object
-        tool_instance = MockTool(
-            name=tool_name,
-            description=tool_definition.get("description", ""),
-            input_schema=tool_definition.get("input_schema", {}),
-            output_schema=tool_definition.get("output_schema", {}),
-            handler=handler_function
-        )
-        self.tools[tool_name] = tool_instance
-        print(f"Tool '{tool_name}' registered with Mock MCP Server.")
-        print(f"  Description: {tool_instance.description}")
-        # We could print schemas too, but it might be verbose for now.
-
-    async def start(self):
-        print(f"Mock MCP Server starting on {self.host}:{self.port}")
-        print("Registered tools:")
-        if not self.tools:
-            print("  No tools registered.")
-        else:
-            for name in self.tools.keys():
-                print(f"  - {name} (Ready for mock execution)")
-
-        # This is where a real server would start listening for network connections.
-        # For our mock, we'll just print that it's "running" and keep the event loop alive.
-        print("Mock server is now 'running'. Press Ctrl+C to stop.")
-        try:
-            while True:
-                # In a real server, this loop would be handled by the server's own
-                # connection handling logic (e.g., asyncio's server facilities).
-                await asyncio.sleep(1) # Keep the main coroutine alive
-        except asyncio.CancelledError:
-            print("Mock MCP Server main loop cancelled.")
-        finally:
-            print("Mock MCP Server shutting down.")
-
-    # Example of how a tool might be invoked (for testing or internal use)
-    async def _invoke_tool_for_test(self, tool_name: str, **kwargs):
-        if tool_name not in self.tools:
-            print(f"Error: Tool '{tool_name}' not found.")
-            return {"error": f"Tool '{tool_name}' not found."}
-
-        tool_to_run = self.tools[tool_name]
-        return await tool_to_run.execute(**kwargs)
+# Configure basic logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 # --- Main Application Logic ---
 async def main_server_logic():
     # Ensure POLYGON_API_KEY is available, as tools depend on it.
-    if not os.environ.get("POLYGON_API_KEY"):
-        print("CRITICAL WARNING: POLYGON_API_KEY environment variable is not set.")
-        print("The Polygon API tools will fail. Please set this variable before running.")
-        # Depending on strictness, we might choose to exit here.
-        # For now, let's allow it to start but with tools likely failing.
+    api_key = os.environ.get("POLYGON_API_KEY")
+    if not api_key:
+        logger.critical("POLYGON_API_KEY environment variable is not set.")
+        logger.critical("The Polygon API tools will fail. Please set this variable before running.")
+        # Consider whether to exit or proceed with non-functional tools
+        # For now, proceeding but tools will likely error out.
     else:
-        print("POLYGON_API_KEY found. Tools should be able to connect to Polygon API.")
+        logger.info("POLYGON_API_KEY found. Tools should be able to connect to Polygon API.")
 
-    # Initialize our Mock MCP server
-    server = MockMCPServer(host="0.0.0.0", port=7777) # Using a common dev port
+    # Initialize the MCP server
+    # Assuming MCPServer takes host and port.
+    # The MCP SDK might handle server identity (name, version, etc.) differently,
+    # possibly via configuration files or other parameters.
+    # For now, a simple initialization.
+    server = MCPServer(
+        host="0.0.0.0",
+        port=7777,
+        server_name="PolygonMCPServer",
+        server_version="0.1.0",
+        description="An MCP server providing tools to interact with the Polygon.io API."
+    )
+    logger.info(f"MCP Server '{server.server_name}' v{server.server_version} initialized to run on {server.host}:{server.port}")
 
     # Register all tools defined in ohlcv_tools.py
-    for tool_def in ALL_TOOL_DEFS:
-        tool_name = tool_def.get("tool_name")
+    registered_tool_count = 0
+    for tool_def_dict in ALL_TOOL_DEFS:
+        tool_name = tool_def_dict.get("tool_name")
+        if not tool_name:
+            logger.warning("Found a tool definition without a 'tool_name' in ALL_TOOL_DEFS. Skipping.")
+            continue
+
         handler = TOOL_HANDLERS.get(tool_name)
-        if handler:
-            server.register_tool(tool_definition=tool_def, handler_function=handler)
-        else:
-            print(f"Warning: No handler found for tool '{tool_name}' defined in ALL_TOOL_DEFS.")
-            print(f"         Tool '{tool_name}' will not be operational.")
+        if not handler:
+            logger.warning(f"No handler found for tool '{tool_name}' in TOOL_HANDLERS. Tool will not be operational.")
+            continue
+
+        try:
+            # Assuming the MCP SDK's ToolDefinition can be created from a dictionary
+            # or that MCPServer.add_tool can take the dictionary directly.
+            # Let's assume ToolDefinition can parse the schema parts.
+            # The actual SDK might have a more structured way to define parameters.
+            
+            # Create ToolParameter objects if the SDK requires it
+            # This is a guess based on typical SDK design.
+            input_params = []
+            if "properties" in tool_def_dict.get("input_schema", {}):
+                for name, schema in tool_def_dict["input_schema"]["properties"].items():
+                    input_params.append(ToolParameter(
+                        name=name,
+                        description=schema.get("description", ""),
+                        param_type=schema.get("type"), # SDK might have specific types
+                        is_required=name in tool_def_dict["input_schema"].get("required", [])
+                    ))
+            
+            # For simplicity, we might just pass the schema dicts if the SDK supports it.
+            # Let's try creating ToolDefinition directly from the dict,
+            # assuming it's smart enough or MCPServer.add_tool is.
+            # If not, the above ToolParameter creation would be needed.
+
+            tool_definition = ToolDefinition(
+                tool_name=tool_name,
+                description=tool_def_dict.get("description", ""),
+                input_schema=tool_def_dict.get("input_schema", {}), # Or pass input_params if created
+                output_schema=tool_def_dict.get("output_schema", {}),
+                handler_function=handler
+                # Permissions might be handled here if the SDK supports it
+            )
+            server.add_tool(tool_definition) # Or server.register_tool(tool_definition)
+            logger.info(f"Tool '{tool_name}' registered with MCP Server.")
+            logger.info(f"  Description: {tool_definition.description}")
+            registered_tool_count += 1
+        except Exception as e:
+            logger.error(f"Failed to register tool '{tool_name}': {e}", exc_info=True)
+
+
+    if registered_tool_count == 0:
+        logger.warning("No tools were successfully registered with the MCP server.")
+    else:
+        logger.info(f"Successfully registered {registered_tool_count} tool(s).")
 
     # Start the server
     try:
-        await server.start()
+        logger.info(f"Starting MCP Server on {server.host}:{server.port}...")
+        await server.start() # Assuming an async start method
+        # The MCP server's start() method should handle the main event loop
+        # and keep the server running until stopped.
     except KeyboardInterrupt:
-        print("\nMock MCP Server stopped by user (KeyboardInterrupt).")
+        logger.info("MCP Server stopped by user (KeyboardInterrupt).")
+    except Exception as e:
+        logger.critical(f"MCP Server failed to start or encountered a critical error: {e}", exc_info=True)
     finally:
-        # Perform any cleanup here if necessary
-        print("Mock MCP Server has concluded its run.")
+        logger.info("MCP Server shutting down...")
+        # Perform any cleanup here if necessary (e.g., server.stop() if available)
+        # await server.stop() # If an explicit stop is needed
+        logger.info("MCP Server has concluded its run.")
 
 if __name__ == "__main__":
-    print("Starting Polygon MCP Server application...")
+    logger.info("Starting Polygon MCP Server application...")
 
     # Standard Python asyncio setup
-    if os.name == 'nt': # Windows-specific policy for asyncio if needed
-        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    # The WindowsSelectorEventLoopPolicy is generally not needed for Python 3.8+
+    # as ProactorEventLoop is default on Windows and usually works well.
+    # If issues arise on Windows, it can be reinstated.
+    # if os.name == 'nt':
+    #     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
     asyncio.run(main_server_logic())
