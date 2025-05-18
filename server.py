@@ -8,7 +8,7 @@ from mcp.server.fastmcp import FastMCP
 
 # Import tool registration functions
 from tools.ohlcv_tools import register_tools as register_ohlcv_tools
-from tools import technical_indicator_tools # New import
+from tools.technical_indicator_tools import register_tools as register_technical_indicator_tools
 
 # Configure basic logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -34,7 +34,7 @@ except Exception as e:
 
 # Register technical indicator tools
 try:
-    technical_indicator_tools.register_tools(mcp)
+    register_technical_indicator_tools(mcp)
     logger.info("Technical indicator tools registration process initiated via technical_indicator_tools.register_tools.")
 except Exception as e:
     logger.error(f"Failed to register technical indicator tools: {e}", exc_info=True)

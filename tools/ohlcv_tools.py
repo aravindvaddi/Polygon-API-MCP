@@ -415,6 +415,8 @@ def register_tools(mcp_instance: FastMCP):
 
         try:
             description = tool_def_info.get("description", handler_func.__doc__ or "")
+            # FastMCP infers input_schema and output_schema from type hints and docstrings.
+            # The explicit schemas in TOOL_DEF are for documentation/alternative registration.
             mcp_instance.tool(
                 name=tool_name,
                 description=description
