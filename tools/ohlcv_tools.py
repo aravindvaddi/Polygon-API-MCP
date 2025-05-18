@@ -393,6 +393,43 @@ TOOL_HANDLERS = {
     "get_daily_ticker_summary": get_daily_ticker_summary,
 }
 
+# For FastMCP integration
+from mcp.server.fastmcp import FastMCP # Ensure FastMCP is imported if not already
+import logging # For logging within the registration function
+
+logger = logging.getLogger(__name__)
+
+def register_tools(mcp_instance: FastMCP):
+    """Registers all OHLCV tools with the provided FastMCP instance."""
+    registered_count = 0
+    for tool_def_info in ALL_TOOL_DEFS:
+        tool_name = tool_def_info.get("tool_name")
+        handler_func = TOOL_HANDLERS.get(tool_name)
+
+        if not tool_name:
+            logger.warning("Found an OHLCV tool definition without a 'tool_name' in ohlcv_tools. Skipping.")
+            continue
+        if not handler_func:
+            logger.warning(f"No handler function found for OHLCV tool '{tool_name}' in ohlcv_tools. Skipping.")
+            continue
+
+        try:
+            description = tool_def_info.get("description", handler_func.__doc__ or "")
+            mcp_instance.tool(
+                name=tool_name,
+                description=description
+            )(handler_func)
+            logger.info(f"OHLCV Tool '{tool_name}' registered successfully via ohlcv_tools.register_tools.")
+            registered_count += 1
+        except Exception as e:
+            logger.error(f"Failed to register OHLCV tool '{tool_name}' via ohlcv_tools.register_tools: {e}", exc_info=True)
+    
+    if registered_count == 0:
+        logger.warning("No OHLCV tools were successfully registered by ohlcv_tools.register_tools.")
+    else:
+        logger.info(f"Successfully registered {registered_count} OHLCV tool(s) via ohlcv_tools.register_tools.")
+
+
 if __name__ == '__main__':
     # Example of how to run this function directly for testing
     # You would need to set the POLYGON_API_KEY environment variable
